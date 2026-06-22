@@ -26,7 +26,7 @@
 ## Структура репозиторію
 * `cohort_analysis_cleaning.sql` — повний SQL-скрипт із логікою очищення дат, фільтрації та агрегації.
 * `README.md` — опис проєкту.
-* [Посилання на інтерактивний Google Sheet] — *тут встав своє посилання на таблицю* (налаштовано листи: `Data`, `Cohort_tables`, `Conclusions`).
+* (https://docs.google.com/spreadsheets/d/1Qi8VUPeyR_oCprhZMYyx_sVHM9NWL0maOc20pF_tTQg/edit?usp=sharing)
 
 ---
 
