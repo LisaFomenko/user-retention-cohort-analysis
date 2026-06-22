@@ -32,4 +32,4 @@
 
 ## Інструменти
 * **SQL:** PostgreSQL (середовище розробки DBeaver)
-* **Аналітичні інструменти:** Google Sheets (Pivot Tables, Slicers, Conditional Formatting).# user-retention-cohort-analysis
+* **Аналітичні інструменти:** Google Sheets (Pivot Tables, Slicers, Conditional Formatting)
