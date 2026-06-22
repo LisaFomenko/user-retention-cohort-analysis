@@ -1,38 +1,40 @@
---1
+--1. Первинний перегляд структури даних
 SELECT * 
 FROM cohort_users_raw 
 LIMIT 10; 
 
---2
+--2. Видалення зайвих пробілів на початку та наприкінці текстового рядка
 SELECT 
     signup_datetime,
     TRIM(signup_datetime) --очистка лівих і правих пробілів
 FROM cohort_users_raw;
 
---3
+--3. Редагування дати (видалення часу за допомогою розділювача пробілу)
 SELECT 
     signup_datetime,
     split_part(TRIM(signup_datetime), ' ',1) --відрізання часу
 FROM cohort_users_raw;
 
---4
+--4. Стандартизація делімітерів: заміна символів "/" та "." на уніфікований дефіс "-"
 SELECT 
     signup_datetime,
-    REGEXP_REPLACE((split_part(TRIM(signup_datetime), ' ',1)), '[/.]', '-', 'g') --регулярний вирз для заміни "/" і "." на "-"
+    REGEXP_REPLACE((split_part(TRIM(signup_datetime), ' ',1)), '[/.]', '-', 'g')
 FROM cohort_users_raw;
 
---5
+--5. Обробка двозначного формату року (YY) та приведення текстового рядка до типу DATE
+-- Перевірка довжини року (3-тя позиція після розділення). Якщо рік містить 2 символи, додається префікс '20'.
 SELECT
      signup_datetime,
      REGEXP_REPLACE((split_part(TRIM(signup_datetime), ' ',1)), '[/.]', '-', 'g'),
-    CASE WHEN length(split_part(REGEXP_REPLACE((split_part(TRIM(signup_datetime), ' ',1)), '[/.]', '-', 'g'), '-', 3)) = 2 --відділення року від дати, якщо містить 2 символи, то
-        THEN split_part(REGEXP_REPLACE((split_part(TRIM(signup_datetime), ' ',1)), '[/.]', '-', 'g'), '-', 1) || '-' ||  --відділення дня + "-" +
-             split_part(REGEXP_REPLACE((split_part(TRIM(signup_datetime), ' ',1)), '[/.]', '-', 'g'), '-', 2) || '-20' || --відділення місяця + "-20" +
-             split_part(REGEXP_REPLACE((split_part(TRIM(signup_datetime), ' ',1)), '[/.]', '-', 'g'), '-', 3) --відділення року
-        ELSE REGEXP_REPLACE((split_part(TRIM(signup_datetime), ' ',1)), '[/.]', '-', 'g') --в іншому випадку повернути це саме значення
+    CASE WHEN length(split_part(REGEXP_REPLACE((split_part(TRIM(signup_datetime), ' ',1)), '[/.]', '-', 'g'), '-', 3)) = 2 
+        THEN split_part(REGEXP_REPLACE((split_part(TRIM(signup_datetime), ' ',1)), '[/.]', '-', 'g'), '-', 1) || '-' ||  
+             split_part(REGEXP_REPLACE((split_part(TRIM(signup_datetime), ' ',1)), '[/.]', '-', 'g'), '-', 2) || '-20' || 
+             split_part(REGEXP_REPLACE((split_part(TRIM(signup_datetime), ' ',1)), '[/.]', '-', 'g'), '-', 3) 
+        ELSE REGEXP_REPLACE((split_part(TRIM(signup_datetime), ' ',1)), '[/.]', '-', 'g') 
      END
 FROM cohort_users_raw;
 
+-- Конвертація обробленого рядка у тип DATE за шаблоном 'DD-MM-YYYY'
 SELECT
      signup_datetime,
      REGEXP_REPLACE((split_part(TRIM(signup_datetime), ' ',1)), '[/.]', '-', 'g'),
@@ -42,10 +44,10 @@ SELECT
              split_part(REGEXP_REPLACE((split_part(TRIM(signup_datetime), ' ',1)), '[/.]', '-', 'g'), '-', 2) || '-20' ||
              split_part(REGEXP_REPLACE((split_part(TRIM(signup_datetime), ' ',1)), '[/.]', '-', 'g'), '-', 3)
         ELSE REGEXP_REPLACE((split_part(TRIM(signup_datetime), ' ',1)), '[/.]', '-', 'g')
-     END, 'DD-MM-YYYY') AS signup_ts --перетворення в дату
+     END, 'DD-MM-YYYY') AS signup_ts 
 FROM cohort_users_raw;
 
---СТЕ 1
+--СТЕ 1. Формування базового набору даних користувачів із валідованою датою реєстрації
 
 SELECT
     user_id,
@@ -61,7 +63,7 @@ SELECT
 FROM cohort_users_raw;
 
 
---СТЕ 2 (перетворення дати аналогічно до СТЕ 1)
+--СТЕ 2. Формування набору даних активності (трансформація дат аналогічна до CTE 1)
 
 SELECT 
     user_id,
@@ -75,7 +77,7 @@ SELECT
      END, 'DD-MM-YYYY') AS event_ts
 FROM cohort_events_raw;
 
---JOIN СТЕ 3
+--JOIN СТЕ 3. Об'єднання таблиць, розрахунок місячного інтервалу та очищення від NULL-значень і тестів
 
 WITH users_parsed AS(
 SELECT
@@ -105,9 +107,9 @@ FROM cohort_events_raw)
 SELECT
     u.user_id,
     u.promo_signup_flag,
-    date_trunc('month', signup_ts)::date AS cohort_month, --округлення до місяця і перетворення в дату без часу
-    date_trunc('month', event_ts)::date AS activity_month,--округлення до місяця і перетворення в дату без часу
-    EXTRACT(MONTH FROM age(date_trunc('month',event_ts), date_trunc('month', signup_ts))) AS month_offset --вдиділення року з обох дат, різниця між ними і перерахунок в місяці + виділення місяців з дат, їх різниця
+    date_trunc('month', signup_ts)::date AS cohort_month,
+    date_trunc('month', event_ts)::date AS activity_month,
+    EXTRACT(MONTH FROM age(date_trunc('month',event_ts), date_trunc('month', signup_ts))) AS month_offset 
 FROM users_parsed u
 JOIN event_parsed e
 ON u.user_id=e.user_id
@@ -116,7 +118,7 @@ WHERE signup_ts IS NOT NULL
     AND event_type IS NOT NULL
     AND event_type <> 'test_event';
 
--- фінальний запит
+-- Фінальний агрегований запит для побудови матриці утримання
 
 WITH users_parsed AS(
 SELECT
@@ -147,9 +149,9 @@ user_activity AS (
 SELECT
     u.user_id,
     u.promo_signup_flag,
-    date_trunc('month', signup_ts)::date AS cohort_month, --округлення до місяця і перетворення в дату без часу
-    date_trunc('month', event_ts)::date AS activity_month,--округлення до місяця і перетворення в дату без часу
-    EXTRACT(MONTH FROM age(date_trunc('month',event_ts), date_trunc('month', signup_ts))) AS month_offset --знаходження різниці між датами в місяцях
+    date_trunc('month', signup_ts)::date AS cohort_month,
+    date_trunc('month', event_ts)::date AS activity_month
+    EXTRACT(MONTH FROM age(date_trunc('month',event_ts), date_trunc('month', signup_ts))) AS month_offset
 FROM users_parsed u
 JOIN event_parsed e
 ON u.user_id=e.user_id
